@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring Boot & AWS Services Overview</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-4xl font-bold text-center mb-8">Spring Boot & AWS Services Overview</h1>
+
+        <!-- Section 1: Implementing Complex Transaction Scenario -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">1) Implementing Complex Transaction Scenario in Multiple Services in Spring Boot</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-2">A. Using Saga Pattern (Eventual Consistency)</h3>
+                <p class="mb-4">Choreography-based Saga: Each service listens for events and produces events for the next step.</p>
+                <p class="mb-4">Orchestration-based Saga: A central coordinator (Orchestrator) manages the workflow.</p>
+                <pre class="bg-gray-200 p-4 rounded-lg"><code>
+@Saga
+@Component
+public class OrderSaga {
+
+    @Autowired
+    private SagaStepProcessor sagaProcessor;
+
+    @SagaOrchestrationStart
+    public void handleOrderCreation(Order order) {
+        sagaProcessor.startSaga(order);
+    }
+
+    @SagaStep
+    public void reserveInventory(Order order) {
+        // Call Inventory Service
+    }
+
+    @SagaStep
+    public void processPayment(Order order) {
+        // Call Payment Service
+    }
+}
+                </code></pre>
+                <h3 class="text-xl font-semibold mt-4 mb-2">B. Using Two-Phase Commit (Strong Consistency)</h3>
+                <p class="mb-4">Use a Transaction Coordinator.</p>
+                <pre class="bg-gray-200 p-4 rounded-lg"><code>
+@Transactional
+public void performTransaction() {
+    serviceA.doSomething();
+    serviceB.doSomethingElse();
+}
+                </code></pre>
+                <p class="mt-4">Saga is preferred in microservices, while 2PC is good for monolithic apps.</p>
+            </div>
+        </section>
+
+        <!-- Section 2: Spring Security -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">2) Spring Security: Authentication & Authorization</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <p class="mb-4">Spring Security is a framework that secures Spring applications. We use JWT (JSON Web Token) or OAuth2 for authentication.</p>
+                <h3 class="text-xl font-semibold mb-2">Implementation</h3>
+                <p class="mb-4">Add Dependencies (spring-boot-starter-security, jjwt)</p>
+                <pre class="bg-gray-200 p-4 rounded-lg"><code>
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http.csrf().disable()
+            .authorizeHttpRequests(auth -> auth.requestMatchers("/admin/**").hasRole("ADMIN")
+                .anyRequest().authenticated())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        return http.build();
+    }
+}
+                </code></pre>
+                <h3 class="text-xl font-semibold mt-4 mb-2">JWT Token Generation</h3>
+                <pre class="bg-gray-200 p-4 rounded-lg"><code>
+public String generateToken(UserDetails userDetails) {
+    return Jwts.builder()
+               .setSubject(userDetails.getUsername())
+               .setIssuedAt(new Date())
+               .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
+               .signWith(SignatureAlgorithm.HS256, SECRET_KEY)
+               .compact();
+}
+                </code></pre>
+            </div>
+        </section>
+
+        <!-- Section 3: Handling Memory Leaks in Java -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">3) Handling Memory Leaks in Java</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <ul class="list-disc list-inside">
+                    <li>Use Profilers: JVisualVM, Eclipse MAT, or YourKit to analyze memory leaks.</li>
+                    <li>Check for Unclosed Resources: Close streams, database connections, etc.</li>
+                    <li>Avoid Large Objects in Static Fields.</li>
+                    <li>Use Weak References for caches (WeakHashMap).</li>
+                    <li>Enable Garbage Collection Logging:</li>
+                </ul>
+                <pre class="bg-gray-200 p-4 rounded-lg mt-4"><code>
+-XX:+HeapDumpOnOutOfMemoryError
+-XX:HeapDumpPath=/logs/heapdump.hprof
+                </code></pre>
+            </div>
+        </section>
+
+        <!-- Section 4: Deployment -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">4) Do You Deploy the Application Manually?</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <p>No, deployment is automated using CI/CD pipelines (Jenkins, GitHub Actions, AWS CodePipeline).</p>
+            </div>
+        </section>
+
+        <!-- Section 5: Steps to Deploy Application to a Server -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">5) Steps to Deploy Application to a Server</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <p>Build JAR/WAR using Maven:</p>
+                <pre class="bg-gray-200 p-4 rounded-lg"><code>
+mvn clean package
+                </code></pre>
+                <p>Transfer it to the server:</p>
+                <pre class="bg-gray-200 p-4 rounded-lg"><code>
+scp target/app.jar user@server:/path/
+                </code></pre>
+                <p>Run the application:</p>
+                <pre class="bg-gray-200 p-4 rounded-lg"><code>
+java -jar app.jar
+                </code></pre>
+            </div>
+        </section>
+
+        <!-- Section 6: Enabling HTTPS in Spring Boot -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">6) Enabling HTTPS in Spring Boot</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <p>Generate an SSL certificate:</p>
+                <pre class="bg-gray-200 p-4 rounded-lg"><code>
+keytool -genkey -alias myapp -keyalg RSA -keystore keystore.jks -validity 365
+                </code></pre>
+                <p>Configure application.properties:</p>
+                <pre class="bg-gray-200 p-4 rounded-lg"><code>
+server.ssl.key-store=classpath:keystore.jks
+server.ssl.key-store-password=changeit
+server.port=8443
+                </code></pre>
+                <p>Run the app and access via https://localhost:8443.</p>
+            </div>
+        </section>
+
+        <!-- Section 7: How to Secure APIs? -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">7) How to Secure APIs?</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <ul class="list-disc list-inside">
+                    <li>Enable HTTPS</li>
+                    <li>Use OAuth2/JWT</li>
+                    <li>Validate Input to Prevent SQL Injection</li>
+                    <li>Limit API Rate with Spring Rate Limiting</li>
+                    <li>Use CORS & CSRF Protection</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 8: SQL Query for Department-wise Employee Count -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">8) SQL Query for Department-wise Employee Count</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <pre class="bg-gray-200 p-4 rounded-lg"><code>
+SELECT department_name, COUNT(*) AS employee_count
+FROM employees
+GROUP BY department_name;
+                </code></pre>
+            </div>
+        </section>
+
+        <!-- Section 9: Internal Working of ConcurrentHashMap -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">9) Internal Working of ConcurrentHashMap</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <ul class="list-disc list-inside">
+                    <li>Uses segments (buckets) with locks for high concurrency.</li>
+                    <li>Each segment uses a ReentrantLock.</li>
+                    <li>CAS (Compare And Swap) Mechanism to update without locks.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 10: Creating an Explicit Deadlock in Java -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">10) Creating an Explicit Deadlock in Java</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <pre class="bg-gray-200 p-4 rounded-lg"><code>
+class Deadlock {
+    static final Object LOCK1 = new Object();
+    static final Object LOCK2 = new Object();
+
+    public static void main(String[] args) {
+        new Thread(() -> {
+            synchronized (LOCK1) {
+                synchronized (LOCK2) { }
+            }
+        }).start();
+
+        new Thread(() -> {
+            synchronized (LOCK2) {
+                synchronized (LOCK1) { }
+            }
+        }).start();
+    }
+}
+                </code></pre>
+            </div>
+        </section>
+
+        <!-- Section 11: Spring Boot Actuators -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">11) Spring Boot Actuators</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <p>Provides monitoring endpoints like:</p>
+                <ul class="list-disc list-inside">
+                    <li>/actuator/health</li>
+                    <li>/actuator/metrics</li>
+                    <li>/actuator/loggers</li>
+                </ul>
+                <p>Enable in application.properties:</p>
+                <pre class="bg-gray-200 p-4 rounded-lg"><code>
+management.endpoints.web.exposure.include=*
+                </code></pre>
+            </div>
+        </section>
+
+        <!-- Section 12: Load Balancer -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">12) Load Balancer</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <p>Distributes traffic across multiple instances for fault tolerance.</p>
+                <h3 class="text-xl font-semibold mt-4 mb-2">Types:</h3>
+                <ul class="list-disc list-inside">
+                    <li>Client-Side (Ribbon)</li>
+                    <li>Server-Side (NGINX, AWS ELB)</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 13: Developing API: React to Spring Boot -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">13) Developing API: React to Spring Boot</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <p>React calls Spring Boot API via fetch()</p>
+                <p>Spring Boot serves as REST backend.</p>
+                <pre class="bg-gray-200 p-4 rounded-lg"><code>
+fetch("http://localhost:8080/api/products").then(res => res.json());
+                </code></pre>
+            </div>
+        </section>
+
+        <!-- Section 14: What is SonarQube? -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">14) What is SonarQube?</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <p>Static code analysis tool to detect vulnerabilities.</p>
+            </div>
+        </section>
+
+        <!-- Section 15: What is NGINX? -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">15) What is NGINX?</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <p>Reverse proxy for load balancing and caching.</p>
+            </div>
+        </section>
+
+        <!-- Section 16: What is Splunk? -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">16) What is Splunk?</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <p>A log monitoring and analysis tool.</p>
+            </div>
+        </section>
+
+        <!-- Section 17: What is Hystrix? -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">17) What is Hystrix?</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <p>Circuit breaker for preventing cascading failures.</p>
+            </div>
+        </section>
+
+        <!-- Section 18: Spring Bean Scopes -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">18) Spring Bean Scopes</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <ul class="list-disc list-inside">
+                    <li>Singleton (Default)</li>
+                    <li>Prototype (New instance per request)</li>
+                    <li>Request, Session (Web scopes)</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 19: Security Vulnerabilities -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">19) Security Vulnerabilities</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <ul class="list-disc list-inside">
+                    <li>SQL Injection</li>
+                    <li>CSRF</li>
+                    <li>XSS Attacks</li>
+                    <li>Broken Authentication</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 20: What is JUL (Java Util Logging)? -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">20) What is JUL (Java Util Logging)?</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <p>Default logging framework in Java.</p>
+            </div>
+        </section>
+
+        <!-- Section 21: Fault Tolerance -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">21) Fault Tolerance</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <ul class="list-disc list-inside">
+                    <li>Use Hystrix/Fallbacks</li>
+                    <li>Use Retries with Exponential Backoff</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Section 22: Hibernate vs Spring Data JPA -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">22) Hibernate vs Spring Data JPA</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <table class="min-w-full bg-white">
+                    <thead>
+                        <tr>
+                            <th class="py-2 px-4 border-b">Feature</th>
+                            <th class="py-2 px-4 border-b">Hibernate</th>
+                            <th class="py-2 px-4 border-b">Spring Data JPA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="py-2 px-4 border-b">Complexity</td>
+                            <td class="py-2 px-4 border-b">More setup</td>
+                            <td class="py-2 px-4 border-b">Less setup</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 px-4 border-b">Performance</td>
+                            <td class="py-2 px-4 border-b">Good tuning options</td>
+                            <td class="py-2 px-4 border-b">Uses Hibernate internally</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 px-4 border-b">Use Case</td>
+                            <td class="py-2 px-4 border-b">Custom DB logic</td>
+                            <td class="py-2 px-4 border-b">CRUD-heavy apps</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Section 23: Important AWS Services for Java Developers -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Important AWS Services for Java Developers</h2>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-xl font-semibold mb-2">1. Compute Services</h3>
+                <ul class="list-disc list-inside">
+                    <li>Amazon EC2 (Elastic Compute Cloud)</li>
+                    <li>AWS Lambda</li>
+                    <li>AWS Elastic Beanstalk</li>
+                </ul>
+                <h3 class="text-xl font-semibold mt-4 mb-2">2. Storage & Databases</h3>
+                <ul class="list-disc list-inside">
+                    <li>Amazon S3 (Simple Storage Service)</li>
+                    <li>Amazon RDS (Relational Database Service)</li>
+                    <li>Amazon DynamoDB</li>
+                    <li>Amazon ElastiCache</li>
+                </ul>
+                <h3 class="text-xl font-semibold mt-4 mb-2">3. Networking & Security</h3>
+                <ul class="list-disc list-inside">
+                    <li>Amazon VPC (Virtual Private Cloud)</li>
+                    <li>AWS IAM (Identity and Access Management)</li>
+                    <li>AWS Secrets Manager & Parameter Store</li>
+                    <li>AWS Certificate Manager (ACM)</li>
+                </ul>
+                <h3 class="text-xl font-semibold mt-4 mb-2">4. Monitoring & Logging</h3>
+                <ul class="list-disc list-inside">
+                    <li>Amazon CloudWatch</li>
+                    <li>AWS X-Ray</li>
+                    <li>AWS CloudTrail</li>
+                </ul>
+                <h3 class="text-xl font-semibold mt-4 mb-2">5. API & Messaging</h3>
+                <ul class="list-disc list-inside">
+                    <li>Amazon API Gateway</li>
+                    <li>AWS SNS (Simple Notification Service)</li>
+                    <li>AWS SQS (Simple Queue Service)</li>
+                    <li>Amazon EventBridge</li>
+                </ul>
+                <h3 class="text-xl font-semibold mt-4 mb-2">6. DevOps & CI/CD</h3>
+                <ul class="list-disc list-inside">
+                    <li>AWS CodePipeline</li>
+                    <li>AWS CodeBuild</li>
+                    <li>AWS CodeDeploy</li>
+                </ul>
+                <h3 class="text-xl font-semibold mt-4 mb-2">7. Containers & Kubernetes</h3>
+                <ul class="list-disc list-inside">
+                    <li>Amazon ECS (Elastic Container Service)</li>
+                    <li>Amazon EKS (Elastic Kubernetes Service)</li>
+                    <li>AWS Fargate</li>
+                </ul>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
